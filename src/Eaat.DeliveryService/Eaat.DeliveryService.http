@@ -1,0 +1,6 @@
+@Eaat.DeliveryService_HostAddress = http://localhost:5034
+
+GET {{Eaat.DeliveryService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
