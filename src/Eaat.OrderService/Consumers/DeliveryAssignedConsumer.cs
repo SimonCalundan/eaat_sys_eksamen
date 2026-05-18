@@ -1,5 +1,7 @@
 using Eaat.Contracts.Events.Deliveries;
+using Eaat.Contracts.Events.Orders;
 using Eaat.Infra.Messaging;
+using Eaat.Infra.Outbox;
 using Eaat.OrderService.Domain;
 using Eaat.OrderService.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +29,8 @@ public sealed class DeliveryAssignedConsumer : EventConsumerBase<DeliveryAssigne
         CancellationToken ct)
     {
         var db = scope.GetRequiredService<OrderDbContext>();
+        var outboxWriter = scope.GetRequiredService<IOutboxWriter>();
+
         var order = await db.Orders.FindAsync(new object[] { evt.OrderId }, ct);
 
         if (order is null)
@@ -44,6 +48,17 @@ public sealed class DeliveryAssignedConsumer : EventConsumerBase<DeliveryAssigne
         }
 
         order.MarkPickedUp(evt.OccurredAt);
+
+        await outboxWriter.AddAsync(new OrderPickedUp(
+            EventId: Guid.NewGuid(),
+            CorrelationId: order.Id,
+            OccurredAt: order.PickedUpAt!.Value,
+            OrderId: order.Id,
+            CustomerId: order.CustomerId,
+            CourierId: evt.CourierId,
+            PickedUpAt: order.PickedUpAt.Value
+        ), ct);
+
         await db.SaveChangesAsync(ct);
     }
 }
