@@ -1,0 +1,122 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: eaat-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    image: mysql:8.0
+    container_name: eaat-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: eaat_orders
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./infra/mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  order-service:
+    build:
+      context: .
+      dockerfile: src/Eaat.OrderService/Dockerfile
+    container_name: eaat-order-service
+    ports:
+      - "5001:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__OrderDb: server=mysql;port=3306;database=eaat_orders;user=root;password=root
+      RabbitMq__Host: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+
+  restaurant-service:
+    build:
+      context: .
+      dockerfile: src/Eaat.RestaurantService/Dockerfile
+    container_name: eaat-restaurant-service
+    ports:
+      - "5002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__RestaurantDb: server=mysql;port=3306;database=eaat_restaurants;user=root;password=root
+      RabbitMq__Host: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+
+  delivery-service:
+    build:
+      context: .
+      dockerfile: src/Eaat.DeliveryService/Dockerfile
+    container_name: eaat-delivery-service
+    ports:
+      - "5003:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DeliveryDb: server=mysql;port=3306;database=eaat_deliveries;user=root;password=root
+      RabbitMq__Host: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: src/Eaat.NotificationService/Dockerfile
+    container_name: eaat-notification-service
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ConnectionStrings__NotificationDb: server=mysql;port=3306;database=eaat_notifications;user=root;password=root
+      RabbitMq__Host: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: src/Eaat.ApiGateway/Dockerfile
+    container_name: eaat-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+    depends_on:
+      - order-service
+      - restaurant-service
+      - delivery-service
+
+volumes:
+  rabbitmq-data:
+  mysql-data:
