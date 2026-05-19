@@ -4,6 +4,8 @@ Eksamensprojekt på 4. semester System Integration (datamatiker, Erhvervsakademi
 
 Eaat er en prototype på en event-drevet madudleveringsplatform. En backend der orkestrerer flowet fra kunde lægger ordre, restaurant accepterer, til bud leverer maden.
 
+For yderligere dokumentation om design, systemets struktur, event-flow osv. se [architecture.md](./docs/architecture.md) og de andre filer i /docs.
+
 ## Kør projektet
 
 ```bash
