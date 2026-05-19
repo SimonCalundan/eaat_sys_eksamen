@@ -19,6 +19,7 @@ builder.Services.AddHostedService<OrderRejectedNotificationConsumer>();
 builder.Services.AddHostedService<OrderReadyForPickupNotificationConsumer>();
 builder.Services.AddHostedService<OrderPickedUpNotificationConsumer>();
 builder.Services.AddHostedService<OrderDeliveredNotificationConsumer>();
+builder.Services.AddHostedService<DeliveryUnavailableBroadcastConsumer>();
 
 var host = builder.Build();
 

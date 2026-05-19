@@ -96,6 +96,14 @@ public static class DeliveriesEndpoints
             CourierId: request.CourierId
         ), ct);
 
+        await outboxWriter.AddAsync(new DeliveryUnavailable(
+            EventId: Guid.NewGuid(),
+            CorrelationId: delivery.OrderId,
+            OccurredAt: now,
+            DeliveryId: delivery.Id,
+            OrderId: delivery.OrderId
+        ), ct);
+
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
